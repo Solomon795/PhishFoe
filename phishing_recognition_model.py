@@ -2,11 +2,11 @@ import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
-import tensorflow as tf
+import tensorflow
+import keras
 import logging
-
-tf.get_logger().setLevel(logging.ERROR)
-print("TensorFlow version:", tf.__version__)
+tensorflow.get_logger().setLevel(logging.ERROR)
+print("TensorFlow version:", tensorflow.__version__)
 import pickle
 from nltk.util import ngrams
 import nltk
@@ -31,7 +31,7 @@ from nltk.stem import SnowballStemmer
 
 def load_model_email(model_path):
     # Load the email model from the specified path
-    model = tf.keras.models.load_model(model_path)
+    model = keras.models.load_model(model_path)
     # Compile the model with default loss and optimizer to avoid the warning
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     with open('tokenizer.pickle', 'rb') as handle:
@@ -175,7 +175,7 @@ def tokenize_and_pad_email(email_text, tokenizer, max_length=50):
     # Tokenize the email
     tokenized_text = tokenizer.texts_to_sequences([email_text])
     # Pad the tokenized text
-    padded_text = tf.keras.utils.pad_sequences(tokenized_text, maxlen=max_length)
+    padded_text = keras.utils.pad_sequences(tokenized_text, maxlen=max_length)
     return padded_text
 
 
@@ -213,21 +213,24 @@ def analyze_emails(emails):
 
 def format_as_csv(email_results=None, url_results=None, headers=True):
     output = []
+    counter = 1
 
     # Add headers if required
     if headers:
-        output.append("ID,Type,Content,Malicious_Score")
+        output.append("ID,Type,Content (URL),Malicious_Score")
     if email_results is not None:
         # Format email results
         for email_id, score in email_results:
-            malicious_score = int(round(score.item() * 10))
-            output.append(f"{email_id},email,{malicious_score}")
+            malicious_score = float(round(score.item() * 10))
+            output.append(f"{counter},email,{malicious_score}")
+            counter += 1
 
     if url_results is not None:
         # Format URL results
         for url, score in url_results:
-            malicious_score = int(round(score.item() * 10))
-            output.append(f",url,{url},{malicious_score}")
+            malicious_score = float(round(score.item() * 10))
+            output.append(f"{counter},url,{url},{malicious_score}")
+            counter += 1
 
     return output
 
