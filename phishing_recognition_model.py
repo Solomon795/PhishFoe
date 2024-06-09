@@ -51,9 +51,10 @@ def load_model_url(model_path):
 # Here’s a basic example:
 def parse_arguments():
     parser = argparse.ArgumentParser(description='PhishFoe - Malicious Email & URL Detection',
-                                     epilog="Example:\npython phishing_recognition_model.py -target email emails.txt\n\nFor more information, "
-                                            "visit our documentation at https://github.com/Solomon795/PhishFoe.git")
-    parser.add_argument('-t', '--target', type=str, choices=['url', 'email'], required=True,
+                                     epilog="Example:\n"
+      "python phishing_recognition_model.py -target email emails.txt\n\n"
+      "For more information, visit our documentation at https://github.com/Solomon795/PhishFoe.git", formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('-t', '--target', type=str, choices=['url', 'email', 'email_with_url'], required=True,
                         help='Target of the detection: "url" or "email"')
     parser.add_argument('-i', '--input', type=str,
                         help='Path to the file containing URLs /email chunks or direct URLs /emails')
@@ -247,8 +248,9 @@ def main():
     print("\nPhishFoe is your digital shield, \nmeticulously analyzing and scoring the safety of emails and URLs\n")
     # step 1
     args = parse_arguments()
+    print(args)
     # step 2
-    inputs = read_inputs(args.input_list, delimiter=args.delimiter)
+    inputs = read_inputs(args.input, delimiter=args.delimiter)
     # step 3
     if args.target == 'url':
         url_results = analyze_urls(inputs)
@@ -256,15 +258,15 @@ def main():
     else:
         email_results, email_urls = analyze_emails(inputs)
         csv_output = format_as_csv(email_results=email_results, headers=True)
-        if len(email_urls) > 0:
+        if args.target == 'email_with_url' and len(email_urls) > 0:
             print(f"Extracted URLs from emails:\n{email_urls}\n")
-            # Ask user if they want to predict the maliciousness of these URLs
-            user_response = input("Do you want to predict the maliciousness of these URLs? (yes/no): ")
-            if user_response.lower() == 'yes':
-                email_url_results = analyze_urls(email_urls)
-                csv_output = format_as_csv(email_results=email_results, url_results=email_url_results, headers=True)
-            else:
-                print("\nThank you for using PhishGuard!")
+            # # Ask user if they want to predict the maliciousness of these URLs
+            # user_response = input("Do you want to predict the maliciousness of these URLs? (yes/no): ")
+            # if user_response.lower() == 'yes':
+            email_url_results = analyze_urls(email_urls)
+            csv_output = format_as_csv(email_results=email_results, url_results=email_url_results, headers=True)
+            # else:
+            #     print("\nThank you for using PhishGuard!")
     for line in csv_output:
         print(line)
 
