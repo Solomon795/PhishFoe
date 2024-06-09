@@ -50,12 +50,14 @@ def load_model_url(model_path):
 # and the delimiter. You can use the argparse module to handle this.
 # Here’s a basic example:
 def parse_arguments():
-    parser = argparse.ArgumentParser(description='Malicious URL Detection')
-    parser.add_argument('--target', type=str, choices=['url', 'email'], required=True,
+    parser = argparse.ArgumentParser(description='PhishFoe - Malicious Email & URL Detection',
+                                     epilog="Example:\npython phishing_recognition_model.py -target email emails.txt\n\nFor more information, "
+                                            "visit our documentation at https://github.com/Solomon795/PhishFoe.git")
+    parser.add_argument('-t', '--target', type=str, choices=['url', 'email'], required=True,
                         help='Target of the detection: "url" or "email"')
-    parser.add_argument('input_list', type=str,
+    parser.add_argument('-i', '--input', type=str,
                         help='Path to the file containing URLs /email chunks or direct URLs /emails')
-    parser.add_argument('--delimiter', type=str, default='\n', help='Delimiter for separating inputs')
+    parser.add_argument('-d', '--delimiter', type=str, default='\n', help='Delimiter for separating inputs')
     args = parser.parse_args()
     return args
 
