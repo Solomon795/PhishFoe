@@ -212,30 +212,6 @@ def analyze_emails(emails):
     return email_results, email_urls
 
 
-def format_as_csv(email_results=None, url_results=None, headers=True):
-    output = []
-    counter = 1
-
-    # Add headers if required
-    if headers:
-        output.append("ID,Type,Content (URL),Malicious_Score")
-    if email_results is not None:
-        # Format email results
-        for email_id, content, score in email_results:
-            malicious_score = float(round(score.item() * 10))
-            output.append(f"{counter},email,{malicious_score}")
-            counter += 1
-
-    if url_results is not None:
-        # Format URL results
-        for url, score in url_results:
-            malicious_score = float(round(score.item() * 10))
-            output.append(f"{counter},url,{url},{malicious_score}")
-            counter += 1
-
-    return output
-
-
 def clip_text(text, max_length=50):
     if len(text) > max_length:
         return text[:max_length] + "..."
@@ -304,12 +280,10 @@ def main():
     # step 3
     if args.target == 'url':
         url_results = analyze_urls(inputs)
-        csv_output = format_as_csv(url_results=url_results, headers=True)
         table_output = format_as_table(url_results=url_results)
         json_output = format_as_json(url_results=url_results)
     else:
         email_results, email_urls = analyze_emails(inputs)
-        csv_output = format_as_csv(email_results=email_results, headers=True)
         table_output = format_as_table(email_results=email_results)
         json_output = format_as_json(email_results=email_results)
         if args.target == 'email_with_url' and len(email_urls) > 0:
@@ -318,17 +292,12 @@ def main():
             # user_response = input("Do you want to predict the maliciousness of these URLs? (yes/no): ")
             # if user_response.lower() == 'yes':
             email_url_results = analyze_urls(email_urls)
-            csv_output = format_as_csv(email_results=email_results, url_results=email_url_results, headers=True)
             table_output = format_as_table(email_results=email_results, url_results=email_url_results)
             json_output = format_as_json(email_results=email_results, url_results=email_url_results)
 
     print(table_output)
     with open('recognition_output.json', 'w', encoding='utf-8') as json_file:
         json_file.write(json_output)
-    # else:
-    #     print("\nThank you for using PhishGuard!")
-    for line in csv_output:
-        print(line)
 
 
 if __name__ == "__main__":
