@@ -11,7 +11,7 @@ print("TensorFlow version:", tensorflow.__version__)
 import pickle
 from nltk.util import ngrams
 import nltk
-
+import json
 nltk.data.path.append('nltk_data')
 import re
 import numpy as np
@@ -263,6 +263,30 @@ def format_as_table(email_results=None, url_results=None):
 
     return table
 
+def format_as_json(email_results=None, url_results=None):
+    output = []
+
+    if email_results is not None:
+        for email_id, content, score  in email_results:
+            malicious_score = float(round(score.item() * 10))
+            output.append({
+                "ID": email_id,
+                "Type": "email",
+                "Content": content,
+                "Malicious_Score": malicious_score
+            })
+
+    if url_results is not None:
+        for url_id, (url, score) in enumerate(url_results):
+            malicious_score = float(round(score.item() * 10))
+            output.append({
+                "ID": url_id,
+                "Type": "url",
+                "Content": url,
+                "Malicious_Score": malicious_score
+            })
+
+    return json.dumps(output, indent=4)
 
 def main():
     print('''.--.
@@ -282,10 +306,12 @@ def main():
         url_results = analyze_urls(inputs)
         csv_output = format_as_csv(url_results=url_results, headers=True)
         table_output = format_as_table(url_results=url_results)
+        json_output = format_as_json(url_results=url_results)
     else:
         email_results, email_urls = analyze_emails(inputs)
         csv_output = format_as_csv(email_results=email_results, headers=True)
         table_output = format_as_table(email_results=email_results)
+        json_output = format_as_json(email_results=email_results)
         if args.target == 'email_with_url' and len(email_urls) > 0:
             print(f"Extracted URLs from emails:\n{email_urls}\n")
             # # Ask user if they want to predict the maliciousness of these URLs
@@ -294,8 +320,11 @@ def main():
             email_url_results = analyze_urls(email_urls)
             csv_output = format_as_csv(email_results=email_results, url_results=email_url_results, headers=True)
             table_output = format_as_table(email_results=email_results, url_results=email_url_results)
+            json_output = format_as_json(email_results=email_results, url_results=email_url_results)
 
     print(table_output)
+    with open('recognition_output.json', 'w', encoding='utf-8') as json_file:
+        json_file.write(json_output)
     # else:
     #     print("\nThank you for using PhishGuard!")
     for line in csv_output:
