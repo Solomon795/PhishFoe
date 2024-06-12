@@ -18,17 +18,9 @@ import numpy as np
 import itertools
 import argparse
 import prettytable as pt
+from googletrans import Translator
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
-
-
-# import logging
-
-# 1. Load the Trained Model from the Pickle File:
-# First, make sure you have your trained model saved in a pickle file.
-# You can load it using the pickle module in Python.
-# Assuming your model is named malicious_url_model.pkl, here’s how you can load it:
-
 
 def load_model_email(model_path):
     # Load the email model from the specified path
@@ -61,6 +53,8 @@ def parse_arguments():
     parser.add_argument('-i', '--input', type=str,
                         help='Path to the file containing URLs /email chunks or direct URLs /emails')
     parser.add_argument('-d', '--delimiter', type=str, default='\n', help='Delimiter for separating inputs')
+    parser.add_argument('-l', '--language', type=str, choices=['english', 'german', 'hebrew'], default='english',
+                        help='Language of the input data')
     args = parser.parse_args()
     return args
 
@@ -152,24 +146,47 @@ def analyze_urls(urls):
 
 """Stemming and Tokenizer"""
 # nltk.download('stopwords')
+# Load stopwords and stemmers for English, German, and Hebrew
 stop_words = stopwords.words('english')
 stemmer = SnowballStemmer('english')
 
 text_cleaning_re = "@\S+|https?:\S+|http?:\S+|[^A-Za-z0-9]:\S+|subject:\S+|nbsp"
 """"""
 
+# Initialize the Google Translate API
+translator = Translator()
 
-def preprocess_email(text, stem=False):
-    # Assuming 'preprocess' is your text cleaning function
+def preprocess_email(text, language='english', stem=False):
+    # Assuming 'preprocess' is your text cleaning function (clean the text)
+    if language != 'english':
+        # Translate text to English
+        translated = translator.translate(text, src=language, dest='en')
+        text = translated.text
+
+    # Clean the text
     text = re.sub(text_cleaning_re, ' ', str(text).lower()).strip()
-    tokens = []
-    for token in text.split():
+
+    # Tokenize text
+    tokens = nltk.word_tokenize(text)
+
+    processed_tokens = []
+    for token in tokens:
         if token not in stop_words:
             if stem:
-                tokens.append(stemmer.stem(token))
+                processed_tokens.append(stemmer.stem(token))
             else:
-                tokens.append(token)
-    return " ".join(tokens)
+                processed_tokens.append(token)
+
+    return " ".join(processed_tokens)
+    # tokens = []
+    # for token in text.split():
+    #     if token not in stop_words:
+    #         if stem:
+    #             tokens.append(stemmer.stem(token))
+    #         else:
+    #             tokens.append(token)
+    # return " ".join(tokens)
+
 
 
 def tokenize_and_pad_email(email_text, tokenizer, max_length=50):
@@ -180,9 +197,9 @@ def tokenize_and_pad_email(email_text, tokenizer, max_length=50):
     return padded_text
 
 
-def predict_email(email_text, model, tokenizer):
+def predict_email(email_text, model, tokenizer, language='english'):
     # Preprocess the email text
-    preprocessed_text = preprocess_email(email_text)
+    preprocessed_text = preprocess_email(email_text, language=language, stem=True)
     # Tokenize and pad the email text
     padded_text = tokenize_and_pad_email(preprocessed_text, tokenizer)
     # Predict using the model
@@ -197,7 +214,7 @@ def extract_urls_from_email(email_text):
     return urls
 
 
-def analyze_emails(emails):
+def analyze_emails(emails, language='english'):
     email_results = []
     email_urls = []
     model_path = 'bi_lstm_phishing_email_TF_2.16.1.h5'
@@ -205,7 +222,7 @@ def analyze_emails(emails):
     for i, email in enumerate(emails):
         email_urls.extend(extract_urls_from_email(email))
         # Predict the email
-        prediction = predict_email(email, model, tokenizer)
+        prediction = predict_email(email, model, tokenizer, language=language)
         email_results.append((i, emails[i], prediction))
         # Output the prediction
         print(f"The probability of the {i} email being malicious is: {prediction[0][0]}")
@@ -283,7 +300,7 @@ def main():
         table_output = format_as_table(url_results=url_results)
         json_output = format_as_json(url_results=url_results)
     else:
-        email_results, email_urls = analyze_emails(inputs)
+        email_results, email_urls = analyze_emails(inputs, language=args.language)
         table_output = format_as_table(email_results=email_results)
         json_output = format_as_json(email_results=email_results)
         if args.target == 'email_with_url' and len(email_urls) > 0:

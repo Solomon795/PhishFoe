@@ -1,2 +1,4 @@
 venv/
 .idea/
+*.exe
+recognition_output.json
