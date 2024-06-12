@@ -226,14 +226,14 @@ def format_as_table(email_results=None, url_results=None):
 
     if email_results is not None:
         for email_id, content, score in email_results:
-            malicious_score = float(round(score.item() * 10))
+            malicious_score = float(round(score.item() * 10, 1))
             clipped_content = clip_text(content)
             table.add_row([counter, "email", clipped_content, malicious_score])
             counter += 1
 
     if url_results is not None:
         for url_id, (url, score) in enumerate(url_results):
-            malicious_score = float(round(score.item() * 10))
+            malicious_score = float(round(score.item() * 10, 1))
             table.add_row([counter, "url", url, malicious_score])
             counter += 1
 
