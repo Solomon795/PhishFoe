@@ -44,8 +44,9 @@ def load_model_url(model_path):
 # Here’s a basic example:
 def parse_arguments():
     parser = argparse.ArgumentParser(description='PhishFoe - Malicious Email & URL Detection',
-                                     epilog="Example:\n"
-                                            "python phishing_recognition_model.py -target email emails.txt\n\n"
+                                     epilog="Example (usage):\n"
+                                            "python phishing_recognition_model.py -t email_with_url -i emails.txt -l english\n\n"
+                                            "Returns recognition_output.json file with results (id, type of phish content, content, maliciousness score)\n\n"
                                             "For more information, visit our documentation at https://github.com/Solomon795/PhishFoe.git",
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-t', '--target', type=str, choices=['url', 'email', 'email_with_url'], required=True,
@@ -100,6 +101,7 @@ def preprocess_sentences_url(url):
     X = np.zeros([1, 46656], dtype="int")
     url = url.strip().replace("https://", "")
     url = url.replace("http://", "")
+    url = url.replace("www.", "")
     url = re.sub(r'\.[A-Za-z0-9]+/*', '', url)
     for gram in generate_ngram_url(url):
         try:
