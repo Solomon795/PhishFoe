@@ -5,6 +5,7 @@ os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 import tensorflow
 import keras
 import logging
+
 tensorflow.get_logger().setLevel(logging.ERROR)
 print("TensorFlow version:", tensorflow.__version__)
 import pickle
@@ -16,7 +17,7 @@ import re
 import numpy as np
 import itertools
 import argparse
-
+import prettytable as pt
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 
@@ -52,8 +53,9 @@ def load_model_url(model_path):
 def parse_arguments():
     parser = argparse.ArgumentParser(description='PhishFoe - Malicious Email & URL Detection',
                                      epilog="Example:\n"
-      "python phishing_recognition_model.py -target email emails.txt\n\n"
-      "For more information, visit our documentation at https://github.com/Solomon795/PhishFoe.git", formatter_class=argparse.RawDescriptionHelpFormatter)
+                                            "python phishing_recognition_model.py -target email emails.txt\n\n"
+                                            "For more information, visit our documentation at https://github.com/Solomon795/PhishFoe.git",
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-t', '--target', type=str, choices=['url', 'email', 'email_with_url'], required=True,
                         help='Target of the detection: "url" or "email"')
     parser.add_argument('-i', '--input', type=str,
@@ -67,14 +69,10 @@ def parse_arguments():
 # (given by args.url_list). Split them based on the delimiter (defaulting to newline \n).
 
 def read_inputs(input_list, delimiter='\n'):
-    '''
-    '''
-
     if os.path.isfile(input_list):
-        with open(input_list, 'r') as input_file:
+        with open(input_list, 'r', encoding='utf-8') as input_file:
             inputs = input_file.read().split(delimiter)
     else:
-        # Assume url_list is a direct argument containing URLs
         inputs = input_list.split(delimiter)
     return inputs
 
@@ -208,7 +206,7 @@ def analyze_emails(emails):
         email_urls.extend(extract_urls_from_email(email))
         # Predict the email
         prediction = predict_email(email, model, tokenizer)
-        email_results.append((i, prediction))
+        email_results.append((i, emails[i], prediction))
         # Output the prediction
         print(f"The probability of the {i} email being malicious is: {prediction[0][0]}")
     return email_results, email_urls
@@ -223,7 +221,7 @@ def format_as_csv(email_results=None, url_results=None, headers=True):
         output.append("ID,Type,Content (URL),Malicious_Score")
     if email_results is not None:
         # Format email results
-        for email_id, score in email_results:
+        for email_id, content, score in email_results:
             malicious_score = float(round(score.item() * 10))
             output.append(f"{counter},email,{malicious_score}")
             counter += 1
@@ -236,6 +234,34 @@ def format_as_csv(email_results=None, url_results=None, headers=True):
             counter += 1
 
     return output
+
+
+def clip_text(text, max_length=50):
+    if len(text) > max_length:
+        return text[:max_length] + "..."
+    return text
+
+
+def format_as_table(email_results=None, url_results=None):
+    table = pt.PrettyTable()
+    table.field_names = ["ID", "Type", "Content", "Malicious_Score"]
+
+    counter = 1
+
+    if email_results is not None:
+        for email_id, content, score in email_results:
+            malicious_score = float(round(score.item() * 10))
+            clipped_content = clip_text(content)
+            table.add_row([counter, "email", clipped_content, malicious_score])
+            counter += 1
+
+    if url_results is not None:
+        for url_id, (url, score) in enumerate(url_results):
+            malicious_score = float(round(score.item() * 10))
+            table.add_row([counter, "url", url, malicious_score])
+            counter += 1
+
+    return table
 
 
 def main():
@@ -255,9 +281,11 @@ def main():
     if args.target == 'url':
         url_results = analyze_urls(inputs)
         csv_output = format_as_csv(url_results=url_results, headers=True)
+        table_output = format_as_table(url_results=url_results)
     else:
         email_results, email_urls = analyze_emails(inputs)
         csv_output = format_as_csv(email_results=email_results, headers=True)
+        table_output = format_as_table(email_results=email_results)
         if args.target == 'email_with_url' and len(email_urls) > 0:
             print(f"Extracted URLs from emails:\n{email_urls}\n")
             # # Ask user if they want to predict the maliciousness of these URLs
@@ -265,8 +293,11 @@ def main():
             # if user_response.lower() == 'yes':
             email_url_results = analyze_urls(email_urls)
             csv_output = format_as_csv(email_results=email_results, url_results=email_url_results, headers=True)
-            # else:
-            #     print("\nThank you for using PhishGuard!")
+            table_output = format_as_table(email_results=email_results, url_results=email_url_results)
+
+    print(table_output)
+    # else:
+    #     print("\nThank you for using PhishGuard!")
     for line in csv_output:
         print(line)
 
